@@ -26,29 +26,37 @@ void dump_memory(pid_t pid, const std::string& output_file) {
         return;
     }
 
-    // Read the memory in chunks
-    const size_t chunk_size = 16; // Number of bytes to read at a time
-    unsigned long address = 0; // Start from address 0
-    std::vector<char> buffer(chunk_size);
+    // Read the memory map
+    std::ifstream maps_file("/proc/" + std::to_string(pid) + "/maps");
+    std::string line;
+    while (std::getline(maps_file, line)) {
+        std::istringstream iss(line);
+        std::string address_range;
+        unsigned long start_addr, end_addr;
+        char permissions[5];
 
-    while (true) {
-        // Read memory from the process
-        ssize_t bytes_read = pread(mem_fd, buffer.data(), chunk_size, address);
-        if (bytes_read <= 0) {
-            break; // End of memory or error
-        }
+        // Parse the line
+        if (iss >> address_range >> permissions) {
+            std::sscanf(address_range.c_str(), "%lx-%lx", &start_addr, &end_addr);
+            // Read memory from this range
+            for (unsigned long address = start_addr; address < end_addr; address += 16) {
+                std::vector<char> buffer(16);
+                ssize_t bytes_read = pread(mem_fd, buffer.data(), buffer.size(), address);
+                if (bytes_read <= 0) {
+                    break; // End of memory or error
+                }
 
-        // Output the address and the bytes in hex format
-        output << std::hex << std::setw(8) << std::setfill('0') << address << " : ";
-        for (ssize_t i = 0; i < bytes_read; ++i) {
-            output << std::hex << std::setw(2) << std::setfill('0') << (static_cast<unsigned int>(static_cast<unsigned char>(buffer[i])));
-            if (i < bytes_read - 1) {
-                output << " ";
+                // Output the address and the bytes in hex format
+                output << std::hex << std::setw(8) << std::setfill('0') << address << " : ";
+                for (ssize_t i = 0; i < bytes_read; ++i) {
+                    output << std::hex << std::setw(2) << std::setfill('0') << (static_cast<unsigned int>(static_cast<unsigned char>(buffer[i])));
+                    if (i < bytes_read - 1) {
+                        output << " ";
+                    }
+                }
+                output << std::endl;
             }
         }
-        output << std::endl;
-
-        address += bytes_read; // Move to the next address
     }
 
     close(mem_fd);
