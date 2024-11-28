@@ -38,6 +38,16 @@ std::vector<pid_t> findPIDsByName(const std::string& processName) {
   return pids;
 }
 
+pid_t getLowestPid(std::vector<pid_t> pids) {
+  pid_t lowestPid = (pid_t)999999;
+  for(int i = 0; i < pids.size(); i++) {
+    if(reinterpret_cast<int>(lowestPid) > reinterpret_cast<int>(pids[i])) {lowestPid = pids[i];}
+  }
+  return lowestPid;
+}
+
+
+
 int main() {
   
   std::string processName = "/home/snowy/.local/share/Steam/steamapps/common/Counter-Strike";
@@ -52,6 +62,8 @@ int main() {
       std::cout << pid << " ";
     }
     std::cout << std::endl;
+    std::cout << "---------" << std::endl;
+    std::cout << getLowestPid(pids) << std::endl;
   }
   
   return 0;
