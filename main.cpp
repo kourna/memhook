@@ -4,6 +4,8 @@
 #include <dirent.h>
 #include <cstring>
 #include <vector>
+#include <sstream>
+
 
 std::vector<pid_t> findPIDsByName(const std::string& processName) {
   std::vector<pid_t> pids;
@@ -39,14 +41,44 @@ std::vector<pid_t> findPIDsByName(const std::string& processName) {
 }
 
 pid_t getLowestPid(std::vector<pid_t> pids) {
-  pid_t lowestPid = (pid_t)999999;
+  pid_t lowestPid = (pid_t)pids[1];
   for(int i = 0; i < pids.size(); i++) {
     if(reinterpret_cast<int>(lowestPid) > reinterpret_cast<int>(pids[i])) {lowestPid = pids[i];}
   }
   return lowestPid;
 }
 
+void printPidMemoryMap(pid_t pid) {
 
+  std::cout << "pid : " << std::to_string(pid) << "\n";
+  
+  std::string toprint = "/proc/";
+  toprint += std::to_string(pid);
+  toprint += "/maps";
+
+  std::cout << "Trying to open memory map:" << toprint << "\n";
+  
+  std::ifstream inputPidMap(toprint);
+
+  if (!inputPidMap.is_open()) {
+
+    std::cerr << "Error opening file!" << std::endl;
+    return;
+    
+  } else {
+
+    std::stringstream buffer;
+    buffer << inputPidMap.rdbuf();
+
+    std::string pidMap = buffer.str();
+
+    std::cout << pidMap;
+
+    inputPidMap.close();
+    
+  }
+  
+}
 
 int main() {
   
@@ -61,9 +93,13 @@ int main() {
     for (pid_t pid : pids) {
       std::cout << pid << " ";
     }
+    
     std::cout << std::endl;
     std::cout << "---------" << std::endl;
     std::cout << getLowestPid(pids) << std::endl;
+
+    printPidMemoryMap(getLowestPid(pids));
+
   }
   
   return 0;
