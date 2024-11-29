@@ -1,8 +1,10 @@
-all: memdumper readaddress
+all: memdumper readaddress stacktest
 
 memdumper:
-	g++ -o memdumper memdumper.cpp
+	g++ -o app_memdumper memdumper.cpp
 
 readaddress:
-	g++ -o readaddress readaddress.cpp
+	g++ -o app_readaddress readaddress.cpp
 
+stacktest:
+	g++ -o app_stacktest stacktest.cpp

@@ -1,4 +1,4 @@
-#define APPLICATION_SCAN_STRING "/home/snowy/.local/share/Steam/steamapps/common/Counter-Strike"
+#define APPLICATION_SCAN_STRING "./app_stacktest"
 
 #include <iostream>
 #include <fstream>
@@ -20,7 +20,7 @@ void read_memory(pid_t pid, unsigned long address, size_t num_bytes) {
     std::ostringstream mem_file_path;
     mem_file_path << "/proc/" << pid << "/mem";
 
-    int mem_fd = open(mem_file_path.str().c_str(), 1);
+    int mem_fd = open(mem_file_path.str().c_str(), O_RDONLY);
     if (mem_fd == -1) {
         perror("Error opening memory file");
         return;
@@ -30,13 +30,20 @@ void read_memory(pid_t pid, unsigned long address, size_t num_bytes) {
 
     std::vector<char> buffer(num_bytes);
     ssize_t bytes_read = pread(mem_fd, buffer.data(), num_bytes, address);
+
+    std::cout << bytes_read << " - bytes_read" << std::endl;
+    std::cout << buffer[1] << " - buffer pre" << std::endl;
+    
     if (bytes_read <= 0) {
         std::cerr << "Error reading memory or no bytes read." << std::endl;
     } else {
 
         for (ssize_t i = 0; i < bytes_read; ++i) {
 	  std::cout << std::hex << std::setw(2) << std::setfill('0') << (static_cast<unsigned int>(static_cast<unsigned char>(buffer[i])));
-            if (i < bytes_read - 1) {
+	  std::cout << static_cast<unsigned int>(static_cast<unsigned char>(buffer[i])) << " - buffer aft" << std::endl;
+
+	  
+	  if (i < bytes_read - 1) {
 	      std::cout << " ";
             }
         }
@@ -86,7 +93,7 @@ void printBar() {
 }
 
 pid_t getLowestPid(std::vector<pid_t> pids) {
-  pid_t lowestPid = (pid_t)pids[1];
+  pid_t lowestPid = (pid_t)pids[0];
   for(int i = 0; i < pids.size(); i++) {
     if(reinterpret_cast<int>(lowestPid) > reinterpret_cast<int>(pids[i])) {lowestPid = pids[i];}
   }
@@ -134,6 +141,10 @@ stackAddresses* readStackAddresses(std::string memoryMap) {
   while(std::getline(stream, token)) {
 
     address_range = token;
+    if (address_range.find((std::string)"[stack]") != std::string::npos) {
+      std::cout << "found stack!" << '\n';
+      break;
+    }
     
   }
 
@@ -184,7 +195,7 @@ int main() {
     std::cout << activeStackAddressStruct->end_addr << std::endl;
     printBar();
 
-    read_memory(targetPid, activeStackAddressStruct->start_addr, (size_t)4);
+    read_memory(targetPid, activeStackAddressStruct->end_addr-20, (size_t)10);
 
   }
   
