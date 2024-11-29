@@ -6,6 +6,10 @@
 #include <vector>
 #include <sstream>
 
+struct stackAddresses{
+  unsigned long start_addr;
+  unsigned long end_addr;
+};
 
 std::vector<pid_t> findPIDsByName(const std::string& processName) {
   std::vector<pid_t> pids;
@@ -80,9 +84,7 @@ std::string getPidMemoryMap(pid_t pid) {
   
 }
 
-void readStack(std::string memoryMap) {
-
-  unsigned long start_addr , end_addr;
+stackAddresses* readStackAddresses(std::string memoryMap) {
 
   std::istringstream stream(memoryMap);
   std::string address_range = "";
@@ -93,17 +95,19 @@ void readStack(std::string memoryMap) {
     address_range = token;
     
   }
-
+  
   std::cout << address_range << std::endl;
-  
-  std::sscanf(address_range.c_str(), "%lx-%lx", &start_addr, &end_addr);
 
-  std::cout << start_addr << std::endl;
-  std::cout << end_addr << std::endl;
+  stackAddresses *returnstruct = new stackAddresses;
 
+  unsigned long tmp_start_addr = 0,  tmp_end_addr = 0;
   
+  std::sscanf(address_range.c_str(), "%lx-%lx", &tmp_start_addr, &tmp_end_addr);
+
+  returnstruct -> start_addr = tmp_start_addr;
+  returnstruct -> end_addr = tmp_end_addr;
   
-  return;
+  return returnstruct;
   
 }
 
@@ -124,8 +128,14 @@ int main() {
     std::cout << std::endl;
     std::cout << "---------" << std::endl;
     std::cout << getLowestPid(pids) << std::endl;
+    
+    stackAddresses *activeStackAddressStruct;
+    
+    activeStackAddressStruct = readStackAddresses(getPidMemoryMap(getLowestPid(pids)));
 
-    readStack(getPidMemoryMap(getLowestPid(pids)));
+    std::cout << activeStackAddressStruct->start_addr << std::endl;
+    std::cout << activeStackAddressStruct->end_addr << std::endl;
+
 
   }
   
