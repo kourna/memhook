@@ -48,7 +48,7 @@ pid_t getLowestPid(std::vector<pid_t> pids) {
   return lowestPid;
 }
 
-void printPidMemoryMap(pid_t pid) {
+std::string getPidMemoryMap(pid_t pid) {
 
   std::cout << "pid : " << std::to_string(pid) << "\n";
   
@@ -63,7 +63,7 @@ void printPidMemoryMap(pid_t pid) {
   if (!inputPidMap.is_open()) {
 
     std::cerr << "Error opening file!" << std::endl;
-    return;
+    return "0";
     
   } else {
 
@@ -72,11 +72,38 @@ void printPidMemoryMap(pid_t pid) {
 
     std::string pidMap = buffer.str();
 
-    std::cout << pidMap;
-
     inputPidMap.close();
+
+     return pidMap;
+     
+  }
+  
+}
+
+void readStack(std::string memoryMap) {
+
+  unsigned long start_addr , end_addr;
+
+  std::istringstream stream(memoryMap);
+  std::string address_range = "";
+  std::string token;
+  
+  while(std::getline(stream, token)) {
+
+    address_range = token;
     
   }
+
+  std::cout << address_range << std::endl;
+  
+  std::sscanf(address_range.c_str(), "%lx-%lx", &start_addr, &end_addr);
+
+  std::cout << start_addr << std::endl;
+  std::cout << end_addr << std::endl;
+
+  
+  
+  return;
   
 }
 
@@ -98,7 +125,7 @@ int main() {
     std::cout << "---------" << std::endl;
     std::cout << getLowestPid(pids) << std::endl;
 
-    printPidMemoryMap(getLowestPid(pids));
+    readStack(getPidMemoryMap(getLowestPid(pids)));
 
   }
   
