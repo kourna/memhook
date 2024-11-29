@@ -1,6 +1,11 @@
+#define APPLICATION_SCAN_STRING "/home/snowy/.local/share/Steam/steamapps/common/Counter-Strike"
+
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <iomanip>
+#include <unistd.h>
+#include <fcntl.h>
 #include <dirent.h>
 #include <cstring>
 #include <vector>
@@ -10,6 +15,37 @@ struct stackAddresses{
   unsigned long start_addr;
   unsigned long end_addr;
 };
+
+void read_memory(pid_t pid, unsigned long address, size_t num_bytes) {
+    std::ostringstream mem_file_path;
+    mem_file_path << "/proc/" << pid << "/mem";
+
+    int mem_fd = open(mem_file_path.str().c_str(), 1);
+    if (mem_fd == -1) {
+        perror("Error opening memory file");
+        return;
+    }
+
+    std::ofstream output;
+
+    std::vector<char> buffer(num_bytes);
+    ssize_t bytes_read = pread(mem_fd, buffer.data(), num_bytes, address);
+    if (bytes_read <= 0) {
+        std::cerr << "Error reading memory or no bytes read." << std::endl;
+    } else {
+
+        for (ssize_t i = 0; i < bytes_read; ++i) {
+	  std::cout << std::hex << std::setw(2) << std::setfill('0') << (static_cast<unsigned int>(static_cast<unsigned char>(buffer[i])));
+            if (i < bytes_read - 1) {
+	      std::cout << " ";
+            }
+        }
+	std::cout << std::endl;
+    }
+
+    close(mem_fd);
+    output.close();
+}
 
 std::vector<pid_t> findPIDsByName(const std::string& processName) {
   std::vector<pid_t> pids;
@@ -44,6 +80,11 @@ std::vector<pid_t> findPIDsByName(const std::string& processName) {
   return pids;
 }
 
+void printBar() {
+  std::cout << "----------" << std::endl;
+  return;
+}
+
 pid_t getLowestPid(std::vector<pid_t> pids) {
   pid_t lowestPid = (pid_t)pids[1];
   for(int i = 0; i < pids.size(); i++) {
@@ -54,7 +95,7 @@ pid_t getLowestPid(std::vector<pid_t> pids) {
 
 std::string getPidMemoryMap(pid_t pid) {
 
-  std::cout << "pid : " << std::to_string(pid) << "\n";
+  std::cout << "Application master pid : " << std::to_string(pid) << "\n";
   
   std::string toprint = "/proc/";
   toprint += std::to_string(pid);
@@ -95,9 +136,11 @@ stackAddresses* readStackAddresses(std::string memoryMap) {
     address_range = token;
     
   }
-  
-  std::cout << address_range << std::endl;
 
+  printBar();
+  std::cout << "Potentially identified stack: " << address_range << std::endl;
+  printBar();
+  
   stackAddresses *returnstruct = new stackAddresses;
 
   unsigned long tmp_start_addr = 0,  tmp_end_addr = 0;
@@ -113,29 +156,35 @@ stackAddresses* readStackAddresses(std::string memoryMap) {
 
 int main() {
   
-  std::string processName = "/home/snowy/.local/share/Steam/steamapps/common/Counter-Strike";
+  std::string processName = APPLICATION_SCAN_STRING;
   
   std::vector<pid_t> pids = findPIDsByName(processName);
   
   if (pids.empty()) {
+
     std::cout << "No processes found with the name: " << processName << std::endl;
+
   } else {
+
     std::cout << "Found PIDs for '" << processName << "': ";
+
     for (pid_t pid : pids) {
       std::cout << pid << " ";
     }
     
     std::cout << std::endl;
-    std::cout << "---------" << std::endl;
-    std::cout << getLowestPid(pids) << std::endl;
+    printBar();
     
     stackAddresses *activeStackAddressStruct;
+    pid_t targetPid = getLowestPid(pids);
     
-    activeStackAddressStruct = readStackAddresses(getPidMemoryMap(getLowestPid(pids)));
+    activeStackAddressStruct = readStackAddresses(getPidMemoryMap(targetPid));
 
     std::cout << activeStackAddressStruct->start_addr << std::endl;
     std::cout << activeStackAddressStruct->end_addr << std::endl;
+    printBar();
 
+    read_memory(targetPid, activeStackAddressStruct->start_addr, (size_t)4);
 
   }
   
