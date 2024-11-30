@@ -10,48 +10,85 @@
 #include <cstring>
 #include <vector>
 #include <sstream>
+#include <array>
 
 struct stackAddresses{
   unsigned long start_addr;
   unsigned long end_addr;
 };
 
-void read_memory(pid_t pid, unsigned long address, size_t num_bytes) {
-    std::ostringstream mem_file_path;
-    mem_file_path << "/proc/" << pid << "/mem";
+void log_address_list(std::vector<std::array<unsigned long,2>> vec) {
 
-    int mem_fd = open(mem_file_path.str().c_str(), O_RDONLY);
-    if (mem_fd == -1) {
-        perror("Error opening memory file");
-        return;
+  std::cout << "Vector of arrays: " << std::endl;
+  for (const auto& arr : vec) {
+    std::cout << "{ ";
+    for (const int& element : arr) {
+      std::cout << std::dec << element << " ";
     }
+    std::cout << "}" << std::endl; 
+  }
+  
+}
 
-    std::ofstream output;
+void read_memory(pid_t pid, unsigned long address, unsigned long num_bytes) {
 
-    std::vector<char> buffer(num_bytes);
-    ssize_t bytes_read = pread(mem_fd, buffer.data(), num_bytes, address);
-
-    std::cout << bytes_read << " - bytes_read" << std::endl;
-    std::cout << buffer[1] << " - buffer pre" << std::endl;
+  std::ostringstream mem_file_path;
+  mem_file_path << "/proc/" << pid << "/mem";
+  
+  int mem_fd = open(mem_file_path.str().c_str(), O_RDONLY);
+  if (mem_fd == -1) {
+    perror("Error opening memory file");
+    return;
+  }
+  
+  std::ofstream output;
+  
+  std::vector<char> buffer(num_bytes);
+  ssize_t bytes_read = pread(mem_fd, buffer.data(), num_bytes, address);
+  
+  std::cout << bytes_read << " - bytes_read" << std::endl;
+  std::cout << buffer[1] << " - buffer pre" << std::endl;
+  
+  std::vector<std::array<unsigned long,2>> address_list;
+  
+  if (bytes_read <= 0) {
+    std::cerr << "Error reading memory or no bytes read." << std::endl;
+  } else {
     
-    if (bytes_read <= 0) {
-        std::cerr << "Error reading memory or no bytes read." << std::endl;
-    } else {
+    for (ssize_t i = 0; i < bytes_read; ++i) {
+      
+      // std::cout << std::hex << std::setw(2) << std::setfill('0') << (static_cast<unsigned int>(static_cast<unsigned char>(buffer[i]))) << "- old";
 
-        for (ssize_t i = 0; i < bytes_read; ++i) {
-	  std::cout << std::hex << std::setw(2) << std::setfill('0') << (static_cast<unsigned int>(static_cast<unsigned char>(buffer[i])));
-	  std::cout << static_cast<unsigned int>(static_cast<unsigned char>(buffer[i])) << " - buffer aft" << std::endl;
+      unsigned int byte_at_addr = static_cast<unsigned int>(static_cast<unsigned char>(buffer[i]));
 
-	  
-	  if (i < bytes_read - 1) {
-	      std::cout << " ";
-            }
-        }
-	std::cout << std::endl;
+      if(byte_at_addr == 0){
+	continue;
+      }
+      
+      std::cout << std::dec << byte_at_addr << " - value at address: " << std::hex << address + i << std::endl;
+      
+      if (address + i < address) {
+	std::cerr << "Address overflow detected!" << std::endl;
+	break;
+      }
+      
+      address_list.push_back({address+i, byte_at_addr});
+      
+      if (i < bytes_read - 1) {
+	std::cout << " ";
+      }
+
     }
+    
+    log_address_list(address_list);
+    
+    std::cout << std::endl;
 
-    close(mem_fd);
-    output.close();
+  }
+  
+  close(mem_fd);
+  output.close();
+
 }
 
 std::vector<pid_t> findPIDsByName(const std::string& processName) {
@@ -195,7 +232,11 @@ int main() {
     std::cout << activeStackAddressStruct->end_addr << std::endl;
     printBar();
 
-    read_memory(targetPid, activeStackAddressStruct->end_addr-20, (size_t)10);
+    unsigned long bytes_to_read = activeStackAddressStruct->end_addr-activeStackAddressStruct->start_addr;
+
+    std::cout << "Trying to read: " << bytes_to_read << " bytes of stack." << std::endl;
+    
+    read_memory(targetPid, activeStackAddressStruct->start_addr, bytes_to_read);
 
   }
   
