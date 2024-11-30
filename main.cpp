@@ -17,28 +17,55 @@ struct stackAddresses{
   unsigned long end_addr;
 };
 
-void log_address_list(std::vector<std::array<unsigned long,2>> vec) {
+std::vector<std::array<unsigned long, 2>> filter_address_list(std::vector<std::array<unsigned long, 2>> address_list, unsigned long search_filter) {
+
+  unsigned long filtered_list_length = 0;
+  std::vector<std::array<unsigned long, 2>> filtered_list;
+
+  std::cout << "Items matching search filter: " << std::endl;
+
+  for (int i = 0; i < address_list.size(); ++i) {
+    
+    if (address_list[i][1] == search_filter) {
+
+      std::cout << "{ ";
+
+      filtered_list.push_back({address_list[i][0],address_list[i][1]});
+      std::cout << std::hex << address_list[i][0] << std::dec << "-" << address_list[i][1];
+
+      std::cout << "}" << std::endl; 
+
+    }
+    
+  }
+  
+  return filtered_list;
+}
+
+void log_address_list(std::vector<std::array<unsigned long,2>> address_list) {
 
   std::cout << "Vector of arrays: " << std::endl;
-  for (const auto& arr : vec) {
+  for (int i = 0; i < address_list.size(); ++i) {
     std::cout << "{ ";
-    for (const int& element : arr) {
-      std::cout << std::dec << element << " ";
-    }
+
+    std::cout << std::hex << address_list[i][0] << std::dec << "-" << address_list[i][1];
+    
     std::cout << "}" << std::endl; 
   }
   
 }
 
-void read_memory(pid_t pid, unsigned long address, unsigned long num_bytes) {
+std::vector<std::array<unsigned long, 2>> read_memory(pid_t pid, unsigned long address, unsigned long num_bytes) {
 
+  std::vector<std::array<unsigned long,2>> address_list;
+  
   std::ostringstream mem_file_path;
   mem_file_path << "/proc/" << pid << "/mem";
   
   int mem_fd = open(mem_file_path.str().c_str(), O_RDONLY);
   if (mem_fd == -1) {
     perror("Error opening memory file");
-    return;
+    return address_list;
   }
   
   std::ofstream output;
@@ -49,18 +76,17 @@ void read_memory(pid_t pid, unsigned long address, unsigned long num_bytes) {
   std::cout << bytes_read << " - bytes_read" << std::endl;
   std::cout << buffer[1] << " - buffer pre" << std::endl;
   
-  std::vector<std::array<unsigned long,2>> address_list;
+  
   
   if (bytes_read <= 0) {
     std::cerr << "Error reading memory or no bytes read." << std::endl;
   } else {
     
     for (ssize_t i = 0; i < bytes_read; ++i) {
-      
-      // std::cout << std::hex << std::setw(2) << std::setfill('0') << (static_cast<unsigned int>(static_cast<unsigned char>(buffer[i]))) << "- old";
 
       unsigned int byte_at_addr = static_cast<unsigned int>(static_cast<unsigned char>(buffer[i]));
 
+      //scanning all addresses with 0 removed for performance reasons will rmeove later.
       if(byte_at_addr == 0){
 	continue;
       }
@@ -89,6 +115,8 @@ void read_memory(pid_t pid, unsigned long address, unsigned long num_bytes) {
   close(mem_fd);
   output.close();
 
+  return address_list;
+  
 }
 
 std::vector<pid_t> findPIDsByName(const std::string& processName) {
@@ -236,8 +264,10 @@ int main() {
 
     std::cout << "Trying to read: " << bytes_to_read << " bytes of stack." << std::endl;
     
-    read_memory(targetPid, activeStackAddressStruct->start_addr, bytes_to_read);
+    std::vector<std::array<unsigned long, 2>> address_list = read_memory(targetPid, activeStackAddressStruct->start_addr, bytes_to_read);
 
+    filter_address_list(address_list, (unsigned long)100);
+    
   }
   
   return 0;
