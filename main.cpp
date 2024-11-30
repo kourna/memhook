@@ -17,6 +17,11 @@ struct stackAddresses{
   unsigned long end_addr;
 };
 
+enum scanMode {
+  SCAN4BYTE,
+  SCAN1BYTE
+};
+
 std::vector<std::array<unsigned long, 2>> filter_address_list(std::vector<std::array<unsigned long, 2>> address_list, unsigned long search_filter) {
 
   unsigned long filtered_list_length = 0;
@@ -45,9 +50,10 @@ std::vector<std::array<unsigned long, 2>> filter_address_list(std::vector<std::a
 void log_address_list(std::vector<std::array<unsigned long,2>> address_list) {
 
   std::cout << "Vector of arrays: " << std::endl;
+
   for (int i = 0; i < address_list.size(); ++i) {
     std::cout << "{ ";
-
+    
     std::cout << std::hex << address_list[i][0] << std::dec << "-" << address_list[i][1];
     
     std::cout << "}" << std::endl; 
@@ -55,8 +61,10 @@ void log_address_list(std::vector<std::array<unsigned long,2>> address_list) {
   
 }
 
-std::vector<std::array<unsigned long, 2>> read_memory(pid_t pid, unsigned long address, unsigned long num_bytes) {
+//i fucking hate my life why do i exist
 
+std::vector<std::array<unsigned long,2>> read_memory(pid_t pid, unsigned long address, unsigned long num_bytes, scanMode scan_mode) {
+  
   std::vector<std::array<unsigned long,2>> address_list;
   
   std::ostringstream mem_file_path;
@@ -76,50 +84,92 @@ std::vector<std::array<unsigned long, 2>> read_memory(pid_t pid, unsigned long a
   std::cout << bytes_read << " - bytes_read" << std::endl;
   std::cout << buffer[1] << " - buffer pre" << std::endl;
   
-  
-  
   if (bytes_read <= 0) {
     std::cerr << "Error reading memory or no bytes read." << std::endl;
   } else {
+
+
+    //++++++++ SCANNING MULTI BYTE ++++++++
     
-    for (ssize_t i = 0; i < bytes_read; ++i) {
+    if(scan_mode == SCAN4BYTE) {
 
-      unsigned int byte_at_addr = static_cast<unsigned int>(static_cast<unsigned char>(buffer[i]));
+      for (ssize_t i = bytes_read; i > 0; i = i-4) {
 
-      //scanning all addresses with 0 removed for performance reasons will rmeove later.
-      if(byte_at_addr == 0){
-	continue;
-      }
-      
-      std::cout << std::dec << byte_at_addr << " - value at address: " << std::hex << address + i << std::endl;
-      
-      if (address + i < address) {
-	std::cerr << "Address overflow detected!" << std::endl;
-	break;
-      }
-      
-      address_list.push_back({address+i, byte_at_addr});
-      
-      if (i < bytes_read - 1) {
-	std::cout << " ";
+	unsigned int value_at_addr = 
+	  (static_cast<unsigned int>(static_cast<unsigned char>(buffer[i-3])) << 24) |
+	  (static_cast<unsigned int>(static_cast<unsigned char>(buffer[i-2])) << 16) |
+	  (static_cast<unsigned int>(static_cast<unsigned char>(buffer[i-1])) << 8) |
+	  (static_cast<unsigned int>(static_cast<unsigned char>(buffer[i])));;
+	
+	//scanning all addresses with 0 removed for performance reasons will rmeove later.
+	if(value_at_addr == 0){
+	  continue;
+	}
+	
+	std::cout << std::dec << value_at_addr << " - value at address: " << std::hex << address + i << std::endl;
+	
+	if (address + i < address) {
+	  std::cerr << "Address overflow detected!" << std::endl;
+	  break;
+	}
+	
+	address_list.push_back({address+i, value_at_addr});
+	
+	if (i < bytes_read - 1) {
+	  std::cout << " ";
+	}
+        
+	std::cout << std::endl;
+	
       }
 
     }
-    
-    log_address_list(address_list);
-    
-    std::cout << std::endl;
 
+    //++++++++ SCANNING MULTI BYTE END ++++++++
+
+    
+    //++++++++ SCANNING SINGLE BYTE ++++++++
+
+    if(scan_mode == SCAN1BYTE) {
+    
+      for (ssize_t i = bytes_read; i > 0; --i) {
+	
+	unsigned int value_at_addr = static_cast<unsigned int>(static_cast<unsigned char>(buffer[i]));
+	
+	//scanning all addresses with 0 removed for performance reasons will rmeove later.
+	if(value_at_addr == 0){
+	  continue;
+	}
+	
+	std::cout << std::dec << value_at_addr << " - value at address: " << std::hex << address + i << std::endl;
+	
+	if (address + i < address) {
+	  std::cerr << "Address overflow detected!" << std::endl;
+	  break;
+	}
+	
+	address_list.push_back({address+i, value_at_addr});
+	
+	if (i < bytes_read - 1) {
+	  std::cout << " ";
+	}
+        
+	std::cout << std::endl;
+	
+      }
+    }
+
+    //++++++++ SCANNING SINGLE BYTE END ++++++++
+    
+    close(mem_fd);
+    output.close();  
+  
   }
   
-  close(mem_fd);
-  output.close();
-
   return address_list;
-  
 }
 
-std::vector<pid_t> findPIDsByName(const std::string& processName) {
+std::vector<pid_t> find_pids_by_name(const std::string& processName) {
   std::vector<pid_t> pids;
   DIR* dir = opendir("/proc");
   struct dirent* entry;
@@ -165,7 +215,7 @@ pid_t getLowestPid(std::vector<pid_t> pids) {
   return lowestPid;
 }
 
-std::string getPidMemoryMap(pid_t pid) {
+std::string get_pid_memory_map(pid_t pid) {
 
   std::cout << "Application master pid : " << std::to_string(pid) << "\n";
   
@@ -197,7 +247,7 @@ std::string getPidMemoryMap(pid_t pid) {
   
 }
 
-stackAddresses* readStackAddresses(std::string memoryMap) {
+stackAddresses* read_stack_addresses(std::string memoryMap) {
 
   std::istringstream stream(memoryMap);
   std::string address_range = "";
@@ -234,7 +284,7 @@ int main() {
   
   std::string processName = APPLICATION_SCAN_STRING;
   
-  std::vector<pid_t> pids = findPIDsByName(processName);
+  std::vector<pid_t> pids = find_pids_by_name(processName);
   
   if (pids.empty()) {
 
@@ -254,18 +304,20 @@ int main() {
     stackAddresses *activeStackAddressStruct;
     pid_t targetPid = getLowestPid(pids);
     
-    activeStackAddressStruct = readStackAddresses(getPidMemoryMap(targetPid));
+    activeStackAddressStruct = read_stack_addresses(get_pid_memory_map(targetPid));
 
-    std::cout << activeStackAddressStruct->start_addr << std::endl;
-    std::cout << activeStackAddressStruct->end_addr << std::endl;
+    std::cout << "start address :" << activeStackAddressStruct->start_addr << std::endl;
+    std::cout << "end address :" << activeStackAddressStruct->end_addr << std::endl;
     printBar();
 
     unsigned long bytes_to_read = activeStackAddressStruct->end_addr-activeStackAddressStruct->start_addr;
 
     std::cout << "Trying to read: " << bytes_to_read << " bytes of stack." << std::endl;
     
-    std::vector<std::array<unsigned long, 2>> address_list = read_memory(targetPid, activeStackAddressStruct->start_addr, bytes_to_read);
+    std::vector<std::array<unsigned long, 2>> address_list = read_memory(targetPid, activeStackAddressStruct->start_addr, bytes_to_read, SCAN4BYTE);
 
+    log_address_list(address_list);
+    
     filter_address_list(address_list, (unsigned long)100);
     
   }
