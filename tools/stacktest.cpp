@@ -18,6 +18,11 @@ void print_stack_memory() {
     printf("Integer 1: %d at address %p\n", int1, (void*)&int1);
     printf("Integer 2: %d at address %p\n", int2, (void*)&int2);
     printf("Integer 3: %d at address %p\n", int3, (void*)&int3);
+
+    printf("Press Enter to exit...\n");
+    getchar();  // Wait for user input
+
+    
 }
 
 void print_heap_memory(int *heap_array, size_t size) {
@@ -48,9 +53,6 @@ int main() {
     print_heap_memory(heap_array, heap_size);
 
     // Keep the application running
-    printf("Press Enter to exit...\n");
-    getchar();  // Wait for user input
-
     // Free the allocated heap memory
     free(heap_array);
 
