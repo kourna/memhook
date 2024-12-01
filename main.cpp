@@ -1,5 +1,7 @@
 #define APPLICATION_SCAN_STRING "./app_stacktest"
 
+#include "components/gui.h"
+
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -18,6 +20,7 @@ struct stackAddresses{
 };
 
 enum scanMode {
+  SCAN8BYTE,
   SCAN4BYTE,
   SCAN1BYTE
 };
@@ -207,7 +210,7 @@ void printBar() {
   return;
 }
 
-pid_t getLowestPid(std::vector<pid_t> pids) {
+pid_t get_lowest_pid(std::vector<pid_t> pids) {
   pid_t lowestPid = (pid_t)pids[0];
   for(int i = 0; i < pids.size(); i++) {
     if(reinterpret_cast<int>(lowestPid) > reinterpret_cast<int>(pids[i])) {lowestPid = pids[i];}
@@ -302,7 +305,7 @@ int main() {
     printBar();
     
     stackAddresses *activeStackAddressStruct;
-    pid_t targetPid = getLowestPid(pids);
+    pid_t targetPid = get_lowest_pid(pids);
     
     activeStackAddressStruct = read_stack_addresses(get_pid_memory_map(targetPid));
 
