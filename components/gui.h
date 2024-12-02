@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "layout.h"
+#include "drawutils.h"
 
 class wruff_gui {
 
@@ -20,17 +21,41 @@ public:
   GC  gc;
   bool shutdown = false;
   XFontStruct* font;
+  window_layout *active_layout;
   
   //Not sure if this is good impl but it works xddd
-  void draw_window() {
+  void draw_window_old() {
 
     draw_test_line(display,window,gc);
     
-    XDrawString(display, window, gc, 10, 50, "This gui gonna SUCK X3 !", 12);
+
     
     XFlush(display);
 
     return;
+  }
+
+  void draw_window(window_layout_struct* layout) {
+
+    for(unsigned int i = 0; i < layout->id.size(); ++i) {
+
+      switch(layout->type[i]) {
+
+      case BUTTON:
+	draw_dynamic_box_with_text(display, window, gc, layout->anchor_x[i], layout->anchor_y[i], layout->size_x[i], layout->size_y[i], layout->data[i], font);
+	break;
+      case TEXT_BOX:
+	draw_box(display, window, gc, layout->anchor_x[i], layout->anchor_y[i], layout->size_x[i], layout->size_y[i]);
+	break;
+      case BORDER:
+	break;
+
+      }
+
+      XFlush(display);
+
+    }
+
   }
   
   void window_runtime_helper(Display* display, Window window, GC gc, XFontStruct* font) {
@@ -48,7 +73,7 @@ public:
 
       if (event.type == Expose) {
        
-	draw_window();
+	draw_window(active_layout->get_window_layout());
 	
       }
 
@@ -129,10 +154,11 @@ public:
     std::cout << "Loading Layouts..." << std::endl;
 
     
-    window_layout *active_layout = new window_layout();
+    active_layout = new window_layout();
 
-    active_layout->add_element(BUTTON,10,10,100,10);
-
+    active_layout->add_element(BUTTON,10,10,100,10, "Crazy Button");
+    active_layout->add_element(BUTTON, 10, 50, 50, 10, "Another Button");
+    
     //================================= WINDOW HANDLER =================================
     
     std::cout << "Launching window runtime helper..." << std::endl;
@@ -154,6 +180,7 @@ public:
     return 0;
 
   }
+
 };
 
 
@@ -170,7 +197,6 @@ public:
     return;
   }
   
-
 };
 
 
