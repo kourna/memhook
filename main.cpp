@@ -64,6 +64,7 @@ void log_address_list(std::vector<std::array<unsigned long,2>> address_list) {
   
 }
 
+
 //i fucking hate my life why do i exist
 
 std::vector<std::array<unsigned long,2>> read_memory(pid_t pid, unsigned long address, unsigned long num_bytes, scanMode scan_mode) {
@@ -322,6 +323,10 @@ int main() {
     log_address_list(address_list);
     
     filter_address_list(address_list, (unsigned long)100);
+
+    wruff_gui gui;
+    
+    std::cout << gui.init_gui() << std::endl;
     
   }
   
