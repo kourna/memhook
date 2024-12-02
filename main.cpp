@@ -324,9 +324,9 @@ int main() {
     
     filter_address_list(address_list, (unsigned long)100);
 
-    wruff_gui gui;
+    wruff_gui gui_manager;
     
-    std::cout << gui.init_gui() << std::endl;
+    std::cout << gui_manager.init_gui() << std::endl;
     
   }
   
