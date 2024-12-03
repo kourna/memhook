@@ -19,8 +19,11 @@ public:
   Display* display;
   Window window;
   GC  gc;
+
   bool shutdown = false;
+
   XFontStruct* font;
+
   window_layout *active_layout;
   
   //obsolete
@@ -49,7 +52,9 @@ public:
       case BORDER:
 	draw_dynamic_window_border(display,window,gc,layout->anchor_x[i]);
 	break;
-
+      case TABLE:
+	//	array_to_table(display,window,); how tf am i gonna do this lol
+	break;
       }
 
       XFlush(display);
@@ -58,15 +63,18 @@ public:
 
   }
   
-  void window_runtime_helper(Display* display, Window window, GC gc, XFontStruct* font) {
+  void window_runtime_helper(Display* input_display, Window input_window, GC input_gc, XFontStruct* font) {
 
+    Display* func_display = input_display;
+    Window func_window = input_window;
+    GC func_gc = input_gc;
+    
     std::cout << __func__ << " loading fonts..." << std::endl;
     
     XEvent event;
     
     XSetFont(display, gc, font->fid);
     
-    //main window rendering loop :-)
     while(!shutdown) {
       
       XNextEvent(display, &event);
@@ -82,12 +90,27 @@ public:
 	std::cout << "Window resized or moved." << std::endl;
 	
       }
+
+      if(event.type == MotionNotify) {	
+	
+	Window root;
+	Window child;
+	
+	int mouse_x,mouse_y,win_x,win_y;
+
+	std::cout << "help me please" << std::endl;
+	
+	if(XQueryPointer(func_display, func_window, &root, &child, &mouse_x, &mouse_y, &win_x, &win_y, nullptr))
+	  std::cout << "cry";
+	std::cout << "Mouse position: (" << mouse_x << ", " << mouse_y << ")" << std::endl;
+	
+      }
       
     }
     
     return;
 
-  }
+  } 
   
   void draw_test_line(Display* display, Window window, GC gc) {
 
@@ -123,7 +146,7 @@ public:
                                  whiteColor,//border color
                                  whiteColor); // background color
 
-    XSelectInput(display, window, ExposureMask | KeyPressMask | StructureNotifyMask);
+    XSelectInput(display, window, ExposureMask | PointerMotionMask | KeyPressMask | StructureNotifyMask);
     // Font loader
     font = XLoadQueryFont(display, "fixed");
     if (!font) {
@@ -164,13 +187,17 @@ public:
     
     std::cout << "Launching window runtime helper..." << std::endl;
 
-    std::thread t(&wruff_gui::window_runtime_helper, this, display, window, gc, font);
+    std::thread win_runtime(&wruff_gui::window_runtime_helper, this, display, window, gc, font);
+
+
+    
+
     
     sleep(60);
 
     shutdown = true;
     
-    t.join();
+    win_runtime.join();
 
     //Cleanup shoutout to feroxtard
     XUnloadFont(display, font->fid);
@@ -183,21 +210,4 @@ public:
   }
 
 };
-
-
-class input_handler {
-
-public: 
-
-  unsigned int mouseX, mouseY;
-  
-  void mouse_handler() {
-
-    //XQueryPointer(display, rootWindow, &rootReturn, &childReturn, &mouseX, &mouseY, nullptr, nullptr, nullptr);
-
-    return;
-  }
-  
-};
-
 

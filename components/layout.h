@@ -12,13 +12,13 @@
 enum valid_element_types {
 
   BUTTON,
+  TABLE,
   TEXT_INPUT_BOX,
   TEXT_BOX,
   BUTTON_LABELED,
   IMAGE,
   SLIDER,
   SLIDER_LABELED,
-  TABLE,
   BORDER
 
 };
@@ -32,8 +32,8 @@ struct window_layout_struct {
   std::vector<unsigned int> size_y;
   std::vector<unsigned int> id;
   std::vector<std::string> data;
-};
 
+};
 
 class window_layout {
 

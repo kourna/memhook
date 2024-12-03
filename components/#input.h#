@@ -1,0 +1,11 @@
+#pragma once
+
+#include <thread>
+#include <X11/Xlib.h>
+#include <unistd.h> 
+#include <stdio.h>  
+#include <iostream>
+#include <cmath>
+#include <chrono>
+#include <vector>
+  
