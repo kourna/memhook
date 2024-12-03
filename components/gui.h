@@ -23,18 +23,17 @@ public:
   XFontStruct* font;
   window_layout *active_layout;
   
-  //Not sure if this is good impl but it works xddd
+  //obsolete
   void draw_window_old() {
 
     draw_test_line(display,window,gc);
-    
-
-    
+        
     XFlush(display);
 
     return;
   }
-
+  
+  //new
   void draw_window(window_layout_struct* layout) {
 
     for(unsigned int i = 0; i < layout->id.size(); ++i) {
@@ -48,6 +47,7 @@ public:
 	draw_box(display, window, gc, layout->anchor_x[i], layout->anchor_y[i], layout->size_x[i], layout->size_y[i]);
 	break;
       case BORDER:
+	draw_dynamic_window_border(display,window,gc,layout->anchor_x[i]);
 	break;
 
       }
@@ -158,6 +158,7 @@ public:
 
     active_layout->add_element(BUTTON,10,10,100,10, "Crazy Button");
     active_layout->add_element(BUTTON, 10, 50, 50, 10, "Another Button");
+    active_layout->add_element(BORDER,5,0,0,0,"border");
     
     //================================= WINDOW HANDLER =================================
     
@@ -165,7 +166,7 @@ public:
 
     std::thread t(&wruff_gui::window_runtime_helper, this, display, window, gc, font);
     
-    sleep(10);
+    sleep(60);
 
     shutdown = true;
     
