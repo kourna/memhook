@@ -2,6 +2,7 @@
 
 #include <thread>
 #include <X11/Xlib.h>
+#include <X11/Xutil.h>
 #include <unistd.h> 
 #include <stdio.h>  
 #include <iostream>
@@ -23,20 +24,10 @@ public:
   bool shutdown = false;
 
   XFontStruct* font;
-
+  int mouse_x,mouse_y,win_x,win_y;
+  
   window_layout *active_layout;
   
-  //obsolete
-  void draw_window_old() {
-
-    draw_test_line(display,window,gc);
-        
-    XFlush(display);
-
-    return;
-  }
-  
-  //new
   void draw_window(window_layout_struct* layout) {
 
     for(unsigned int i = 0; i < layout->id.size(); ++i) {
@@ -44,7 +35,7 @@ public:
       switch(layout->type[i]) {
 
       case BUTTON:
-	draw_dynamic_box_with_text(display, window, gc, layout->anchor_x[i], layout->anchor_y[i], layout->size_x[i], layout->size_y[i], layout->data[i], font);
+	draw_dynamic_box_with_text(display, window, gc, layout->id[i], font , active_layout->layout);
 	break;
       case TEXT_BOX:
 	draw_box(display, window, gc, layout->anchor_x[i], layout->anchor_y[i], layout->size_x[i], layout->size_y[i]);
@@ -62,16 +53,35 @@ public:
     }
 
   }
-  
-  void window_runtime_helper(Display* input_display, Window input_window, GC input_gc, XFontStruct* font) {
 
-    Display* func_display = input_display;
-    Window func_window = input_window;
-    GC func_gc = input_gc;
+  void clip_cursor_position(unsigned int mouse_x, unsigned int mouse_y) {
+
+    window_layout_struct* active_struct = active_layout->layout;
+    
+    for(int i = 0; i < active_struct->id.size(); ++i) {
+
+      if(
+	 mouse_x > active_struct->anchor_x[i] &&
+	 mouse_x < active_struct->size_x[i]+active_struct->anchor_x[i] &&
+	 mouse_y > active_struct->anchor_y[i] &&
+	 mouse_y < active_struct->size_y[i]+active_struct->anchor_y[i]
+	 )
+	{
+	  std::cout << "clicked on button with id: " << active_struct->id[i] << std::endl;
+	}      
+      
+    }
+
+    return;
+
+  }
+  
+  void window_runtime_helper(XFontStruct* font) {
     
     std::cout << __func__ << " loading fonts..." << std::endl;
     
     XEvent event;
+    int cur_line;
     
     XSetFont(display, gc, font->fid);
     
@@ -96,13 +106,36 @@ public:
 	Window root;
 	Window child;
 	
-	int mouse_x,mouse_y,win_x,win_y;
-
-	std::cout << "help me please" << std::endl;
+	unsigned int psychiose;
 	
-	if(XQueryPointer(func_display, func_window, &root, &child, &mouse_x, &mouse_y, &win_x, &win_y, nullptr))
-	  std::cout << "cry";
-	std::cout << "Mouse position: (" << mouse_x << ", " << mouse_y << ")" << std::endl;
+	XQueryPointer(display, window, &root, &child, &win_x, &win_y, &mouse_x, &mouse_y, &psychiose );
+	
+      }
+      
+      if (event.type == KeyPress) {
+	
+	char buffer[1];
+	KeySym keysym;
+	XLookupString(&event.xkey, buffer, sizeof(buffer), &keysym, NULL);
+	printf("Key pressed: %c\n", buffer[0]);
+
+	if(buffer[0] == 'x')
+	  break;
+	
+	if(buffer[0] == 'w') {
+	  
+	  active_layout->add_element(BUTTON,10,cur_line,100,10, "Crazy Button");
+	  cur_line=cur_line+10;
+	  
+	}
+	
+	if(buffer[0] == 's') {
+	  
+	  clip_cursor_position(mouse_x,mouse_y);
+	  
+	}
+
+	draw_window(active_layout->get_window_layout());
 	
       }
       
@@ -111,12 +144,6 @@ public:
     return;
 
   } 
-  
-  void draw_test_line(Display* display, Window window, GC gc) {
-
-    XDrawLine(display, window, gc, 10, 10, 100, 10);
-
-  }
 
   int init_gui(void) {
 
@@ -175,7 +202,6 @@ public:
     //================================= MAIN LAYOUT CONFIG SPACE ================================= 
 
     std::cout << "Loading Layouts..." << std::endl;
-
     
     active_layout = new window_layout();
 
@@ -187,17 +213,7 @@ public:
     
     std::cout << "Launching window runtime helper..." << std::endl;
 
-    std::thread win_runtime(&wruff_gui::window_runtime_helper, this, display, window, gc, font);
-
-
-    
-
-    
-    sleep(60);
-
-    shutdown = true;
-    
-    win_runtime.join();
+    window_runtime_helper(font);
 
     //Cleanup shoutout to feroxtard
     XUnloadFont(display, font->fid);

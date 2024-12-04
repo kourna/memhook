@@ -12,6 +12,8 @@
 #include <chrono>
 #include <vector>
 
+#include "layout.h"
+
 void draw_box(Display* display, Window window, GC gc, unsigned int anchor_x, unsigned int anchor_y, unsigned int size_x, unsigned int size_y) {
 
   XDrawLine(display, window, gc, anchor_x, anchor_y, anchor_x+size_x, anchor_y);
@@ -22,9 +24,14 @@ void draw_box(Display* display, Window window, GC gc, unsigned int anchor_x, uns
   return;
 }
 
-void draw_dynamic_box_with_text(Display* display, Window window, GC gc, unsigned int anchor_x, unsigned int anchor_y, unsigned int size_x, unsigned int size_y, std::string data, XFontStruct* font) {
+void draw_dynamic_box_with_text(Display* display, Window window, GC gc, unsigned int id , XFontStruct* font, window_layout_struct* layout_struct) {
 
-  std::string todraw = data;
+  std::string todraw = layout_struct->data[id];
+
+  unsigned int anchor_x = layout_struct->anchor_x[id];
+  unsigned int anchor_y = layout_struct->anchor_y[id];
+  unsigned int size_x = layout_struct->size_x[id];
+  unsigned int size_y = layout_struct->size_y[id];
   
   int font_height = font->ascent + font->descent;
   int font_ascent = font->ascent; 
@@ -32,14 +39,19 @@ void draw_dynamic_box_with_text(Display* display, Window window, GC gc, unsigned
   int max_width = font->max_bounds.width;
 
   int total_text_width = (max_width * todraw.length()) + 2*MARGIN_X;
-  int total_text_height = (size_y + 2*MARGIN_Y);
+  int total_text_height = (font_height);
+
+  layout_struct->size_x[id] = total_text_width;
+  layout_struct->size_y[id] = total_text_height;
   
   XDrawLine(display, window, gc, anchor_x, anchor_y, anchor_x+total_text_width, anchor_y);
   XDrawLine(display, window, gc, anchor_x+total_text_width, anchor_y, anchor_x+total_text_width, anchor_y+total_text_height);
   XDrawLine(display, window, gc, anchor_x+total_text_width, anchor_y+total_text_height, anchor_x, anchor_y+total_text_height);
   XDrawLine(display, window, gc, anchor_x, anchor_y+total_text_height, anchor_x, anchor_y);
   
-  XDrawString(display, window, gc, anchor_x+MARGIN_X, anchor_y+size_y+MARGIN_Y, todraw.c_str() , todraw.length() );
+  XDrawString(display, window, gc, anchor_x+MARGIN_X, anchor_y+total_text_height-MARGIN_Y+1, todraw.c_str() , todraw.length() );
+
+  XFlush(display);
   
   return;
 }

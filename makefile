@@ -10,6 +10,6 @@ stacktest:
 	g++ -O0 -o tools/binaries/app_stacktest tools/stacktest.cpp
 
 wruffhook:
-	g++ -o binaries/wruffhook main.cpp components/gui.h components/layout.h components/drawutils.h components/input.h -lX11
+	g++ -g -o binaries/wruffhook main.cpp components/gui.h components/layout.h components/drawutils.h components/input.h -lX11
 
 
