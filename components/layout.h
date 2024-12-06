@@ -23,6 +23,43 @@ enum valid_element_types {
 
 };
 
+struct layout_node_button {
+
+  unsigned int anchor_x;
+  unsigned int anchor_y;
+  unsigned int size_x;
+  unsigned int size_y;
+
+  std::string label;
+
+  unsigned int id;
+
+};
+
+struct layout_node_button {
+  
+  unsigned int anchor_x;
+  unsigned int anchor_y;
+  unsigned int size_x;
+  unsigned int size_y;
+  
+  std::string label;
+  
+  unsigned int id;
+  
+};
+
+teplate<typename T>
+struct layout_node {
+
+  valid_element_tpes type;
+  int data;
+  layout_node* next;
+
+  T layout_node_data;
+
+};
+
 struct window_layout_struct {
 
   std::vector<valid_element_types> type;
@@ -32,6 +69,13 @@ struct window_layout_struct {
   std::vector<unsigned int> size_y;
   std::vector<unsigned int> id;
   std::vector<std::string> data;
+
+};
+
+template <typename T>
+struct layout_element_data {
+
+  T element_data;
 
 };
 
@@ -86,4 +130,31 @@ public:
 
   }
   
+};
+
+class layout_linked_list {
+
+public:
+  
+  
+};
+
+class new_window_layout {
+
+
+  layout_linked_list* layout;
+
+  unsigned int element_count;
+
+  layout_node* first;
+
+public:
+
+  void add_element() {
+
+      }
+  
+  
+
+k
 };

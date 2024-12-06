@@ -68,6 +68,9 @@ public:
 	 )
 	{
 	  std::cout << "clicked on button with id: " << active_struct->id[i] << std::endl;
+
+	  execute_button_functionality();
+	  
 	}      
       
     }

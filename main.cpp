@@ -51,6 +51,18 @@ std::vector<std::array<unsigned long, 2>> filter_address_list(std::vector<std::a
   return filtered_list;
 }
 
+void import_offset_file(std::string file_path) {
+
+  std::ifstream in(file_path);
+  
+  std::ostringstream sstr;
+  sstr  << in.rdbuf();
+  std::string input_offsets = sstr.str();
+  std::cout << input_offsets << std::endl;
+
+  return;
+}
+
 void log_address_list(std::vector<std::array<unsigned long,2>> address_list) {
 
   std::cout << "Vector of arrays: " << std::endl;
@@ -326,6 +338,8 @@ int main() {
     filter_address_list(address_list, (unsigned long)100);
 
     wruff_gui gui_manager;
+
+    import_offset_file("offsets");import_offset_file("offsets");
 
     std::thread win_runtime(&wruff_gui::init_gui, gui_manager);
 
