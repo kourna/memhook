@@ -1,5 +1,6 @@
 #pragma once
 
+#include <variant>
 #include <thread>
 #include <X11/Xlib.h>
 #include <unistd.h> 
@@ -8,6 +9,9 @@
 #include <cmath>
 #include <chrono>
 #include <vector>
+#include <memory>
+
+#include "drawutils.h"
 
 enum valid_element_types {
 
@@ -15,146 +19,48 @@ enum valid_element_types {
   TABLE,
   TEXT_INPUT_BOX,
   TEXT_BOX,
+  TEXT,
+  TEXT_UNDERLINED,
   BUTTON_LABELED,
   IMAGE,
   SLIDER,
   SLIDER_LABELED,
-  BORDER
+  BORDER,
+  UNKNOWN
 
 };
 
-struct layout_node_button {
+struct style_rules {
 
-  unsigned int anchor_x;
-  unsigned int anchor_y;
-  unsigned int size_x;
-  unsigned int size_y;
-
-  std::string label;
-
-  unsigned int id;
 
 };
 
-struct layout_node_button {
-  
-  unsigned int anchor_x;
-  unsigned int anchor_y;
-  unsigned int size_x;
-  unsigned int size_y;
-  
-  std::string label;
-  
-  unsigned int id;
-  
-};
+struct layout_struct {
 
-teplate<typename T>
-struct layout_node {
-
-  valid_element_tpes type;
-  int data;
-  layout_node* next;
-
-  T layout_node_data;
+  std::vector<valid_element_types>type;
+  std::vector<unsigned int>anchor_x;
+  std::vector<unsigned int>anchor_y;
+  std::vector<unsigned int>size_x;
+  std::vector<unsigned int>size_y;
+  std::vector<std::string>label;
+  std::vector<unsigned int>callback;
+  std::vector<unsigned int>id;
 
 };
 
-struct window_layout_struct {
+void add_element(layout_struct *mod_layout_struct, valid_element_types ntype, unsigned int nanchor_x, unsigned int nanchor_y, unsigned int nsize_x, unsigned int nsize_y, std::string nlabel, unsigned int ncallback) {
 
-  std::vector<valid_element_types> type;
-  std::vector<unsigned int> anchor_x;
-  std::vector<unsigned int> anchor_y;
-  std::vector<unsigned int> size_x;
-  std::vector<unsigned int> size_y;
-  std::vector<unsigned int> id;
-  std::vector<std::string> data;
-
-};
-
-template <typename T>
-struct layout_element_data {
-
-  T element_data;
-
-};
-
-class window_layout {
-
-public:
-
-  window_layout_struct* layout;
-
-  unsigned int element_count;
-
-  window_layout() {
-
-    layout = new window_layout_struct();
-    
-    element_count = 0;
-
-  }
-
-  ~window_layout() {
-
-    delete layout;
-
-  }
+  unsigned int next_free_slot = mod_layout_struct->id.size();
   
-  bool add_element(valid_element_types type, unsigned int anchor_x, unsigned int anchor_y, unsigned int size_x, unsigned int size_y, std::string data) {
+  mod_layout_struct->type.emplace_back(ntype);
+  mod_layout_struct->anchor_x.emplace_back(nanchor_x);
+  mod_layout_struct->anchor_y.emplace_back(nanchor_y);
+  mod_layout_struct->size_x.emplace_back(nsize_x);
+  mod_layout_struct->size_y.emplace_back(nsize_y);
+  mod_layout_struct->label.emplace_back(nlabel);
+  mod_layout_struct->callback.emplace_back(ncallback);
+  mod_layout_struct->id.emplace_back(next_free_slot);
 
-    layout->type.push_back(type);
-    layout->anchor_x.push_back(anchor_x);
-    layout->anchor_y.push_back(anchor_y);
-    layout->size_x.push_back(size_x);
-    layout->size_y.push_back(size_y);
-    layout->id.push_back(element_count);
-    layout->data.push_back(data);
-
-    element_count++;
-    
-    return true;
-    
-  }
-
-  bool validate_window_layout_struct() {
-
-    if((layout->type.size() + layout->anchor_x.size() + layout->anchor_y.size() + layout->size_x.size() + layout->size_y.size() + layout->id.size()) / 6 == layout->id.size() ) {
-      return true; } else { return false;}
-
-  }
-
-  window_layout_struct* get_window_layout() {
-
-    return this->layout;
-
-  }
+  return;
   
-};
-
-class layout_linked_list {
-
-public:
-  
-  
-};
-
-class new_window_layout {
-
-
-  layout_linked_list* layout;
-
-  unsigned int element_count;
-
-  layout_node* first;
-
-public:
-
-  void add_element() {
-
-      }
-  
-  
-
-k
-};
+}

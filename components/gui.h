@@ -11,9 +11,9 @@
 #include <vector>
 
 #include "layout.h"
-#include "drawutils.h"
+#include "deserializer.h"
 
-class wruff_gui {
+class x_gui {
 
 public:
 
@@ -23,29 +23,58 @@ public:
 
   bool shutdown = false;
 
+  bool draw_cooldown = false;
+
+  bool want_draw = false;
+  
+  std::vector<std::vector<std::array<uint8_t, 3>>> pixel_data;
+  
   XFontStruct* font;
-  int mouse_x,mouse_y,win_x,win_y;
-  
-  window_layout *active_layout;
-  
-  void draw_window(window_layout_struct* layout) {
 
-    for(unsigned int i = 0; i < layout->id.size(); ++i) {
+  layout_struct *active_layout;
 
-      switch(layout->type[i]) {
+  void draw_active_layout() {
+
+    for(unsigned int i = 0; i < active_layout->id.size(); ++i) {
+
+      switch(active_layout->type[i]) {
 
       case BUTTON:
-	draw_dynamic_box_with_text(display, window, gc, layout->id[i], font , active_layout->layout);
+
+	draw_dynamic_box_with_text(display, window, gc, active_layout->id[i] , font , active_layout->anchor_x[i], active_layout->anchor_y[i], &active_layout->size_x[i], &active_layout->size_y[i],active_layout->label[i]);
+
 	break;
+
+      case TEXT:
+
+	draw_dynamic_text(display, window, gc, active_layout->id[i] , font , active_layout->anchor_x[i], active_layout->anchor_y[i], &active_layout->size_x[i], &active_layout->size_y[i],active_layout->label[i]);
+
+	break;
+
+      case TEXT_UNDERLINED:
+	
+	draw_dynamic_underlined_text(display, window, gc, active_layout->id[i] , font , active_layout->anchor_x[i], active_layout->anchor_y[i], &active_layout->size_x[i], &active_layout->size_y[i],active_layout->label[i]);
+
+	break;
+
       case TEXT_BOX:
-	draw_box(display, window, gc, layout->anchor_x[i], layout->anchor_y[i], layout->size_x[i], layout->size_y[i]);
+	
+	draw_box(display, window, gc, active_layout->anchor_x[i], active_layout->anchor_y[i], active_layout->size_x[i], active_layout->size_y[i]);
+	
 	break;
+
       case BORDER:
-	draw_dynamic_window_border(display,window,gc,layout->anchor_x[i]);
+	
+	draw_dynamic_window_border(display,window,gc,active_layout->anchor_x[i]);
+
 	break;
-      case TABLE:
-	//	array_to_table(display,window,); how tf am i gonna do this lol
+
+      case IMAGE:      
+
+	draw_image(display, window, gc, active_layout->anchor_x[i], active_layout->anchor_y[i], read_bmp(active_layout->label[i]));
+	
 	break;
+
       }
 
       XFlush(display);
@@ -54,24 +83,104 @@ public:
 
   }
 
-  void clip_cursor_position(unsigned int mouse_x, unsigned int mouse_y) {
+  void try_to_draw_window() {
 
-    window_layout_struct* active_struct = active_layout->layout;
+    want_draw = true;
+
+    return;
+
+  }
+
+  void window_drawing_helper() {
+
+    while(!shutdown) {
+
+      if(draw_cooldown){
+	std::this_thread::sleep_for(std::chrono::milliseconds(10));
+	draw_cooldown = false;
+      }
+      if(!draw_cooldown && want_draw) {
+	draw_cooldown = true;
+	want_draw = false;
+	draw_active_layout();}
+    }
+
+    return;
     
-    for(int i = 0; i < active_struct->id.size(); ++i) {
+  }
+  
+  void execute_button_functionality(unsigned int callback_id) {
+    // space to link your callback variables to functions of your code!
+    // the callback values can then be linked to elements in you gui config file!
 
-      if(
-	 mouse_x > active_struct->anchor_x[i] &&
-	 mouse_x < active_struct->size_x[i]+active_struct->anchor_x[i] &&
-	 mouse_y > active_struct->anchor_y[i] &&
-	 mouse_y < active_struct->size_y[i]+active_struct->anchor_y[i]
+    switch(callback_id) {
+    case 0 :
+      
+      std::cout << "no functionality linked :D" << std::endl;
+
+      break;
+      
+    case 1 :
+      
+      std::cout << "red time!" << std::endl;
+
+      XSetForeground(display, gc, 0xFF0000);
+
+      try_to_draw_window();
+      
+      break;
+      
+    case 2 :
+      
+      std::cout << "shutting down..." << std::endl;
+
+      shutdown = true;
+
+      break;
+      
+      
+    }
+    
+    return;
+    
+  }
+
+  void clip_cursor_position(unsigned int mouse_x, unsigned int mouse_y) {
+    
+    for(int i = 0; i < active_layout->id.size(); ++i) {
+      
+      if (
+	 mouse_x > active_layout->anchor_x[i] &&
+	 mouse_x < active_layout->size_x[i]+active_layout->anchor_x[i] &&
+	 mouse_y > active_layout->anchor_y[i] &&
+	 mouse_y < active_layout->size_y[i]+active_layout->anchor_y[i]
 	 )
 	{
-	  std::cout << "clicked on button with id: " << active_struct->id[i] << std::endl;
+	  std::cout << "clicked on button with id: " << active_layout->id[i] << " - and linked callback function id: " << active_layout->callback[i] << std::endl;
+
+	  execute_button_functionality(active_layout->callback[i]);
+
 	}      
       
     }
 
+    return;
+
+  }
+
+  
+  void set_gui_name(std::string name) {
+
+    XStoreName(display, window, name.c_str());
+
+    return;
+
+  }
+
+  void load_from_file(std::string toload) {
+
+    active_layout = deserialize_layout_file(toload);
+    
     return;
 
   }
@@ -84,77 +193,60 @@ public:
     int cur_line = 10;
     
     XSetFont(display, gc, font->fid);
+
+    std::thread draw_helper(&x_gui::window_drawing_helper,this);
     
     while(!shutdown) {
       
       XNextEvent(display, &event);
 
-      if (event.type == Expose) {
-       
-	draw_window(active_layout->get_window_layout());
-	
-      }
+      if (event.type == ButtonPress && event.xbutton.button == 1) { 
 
-      if (event.type == ConfigureNotify) {
-
-	std::cout << "Window resized or moved." << std::endl;
+	printf("Left mouse button pressed at (%d, %d)\n", event.xbutton.x, event.xbutton.y);
+	clip_cursor_position(event.xbutton.x,event.xbutton.y);
 	
-      }
+      } else if (event.type == ButtonRelease && event.xbutton.button == 1) {
 
-      if(event.type == MotionNotify) {	
-	
-	Window root;
-	Window child;
-	
-	unsigned int psychiose;
-	
-	XQueryPointer(display, window, &root, &child, &win_x, &win_y, &mouse_x, &mouse_y, &psychiose );
-	
-      }
-
-      if (event.type == ButtonPress) {	
-
-	if (event.xbutton.button == Button1) {
-	  
-	  clip_cursor_position(mouse_x,mouse_y);
-	  printf("Left mouse button clicked at (%d, %d)\n", event.xbutton.x, event.xbutton.y);
-
-	}
+	printf("Left mouse button released at (%d, %d)\n", event.xbutton.x, event.xbutton.y);
 
       }
-      
+                
       if (event.type == KeyPress) {
 	
-	char buffer[1];
+	char buffer[2];
 
-	KeySym keysym;
+	XLookupString(&event.xkey, buffer, sizeof(buffer), NULL, NULL);
+	std::cout << "key pressed: " << buffer[0] << std::endl;
 	
-	XLookupString(&event.xkey, buffer, sizeof(buffer), &keysym, NULL);
-	printf("Key pressed: %c\n", buffer[0]);
-
-	if(buffer[0] == 'x')
-	  break;
-	
-	if(buffer[0] == 'w') {
+	if(buffer[0] == 'x') {
 	  
-	  active_layout->add_element(BUTTON,10,cur_line,100,10, "Crazy Button");
-
-	  cur_line=cur_line+active_layout->layout->size_y[1];
+	  std::cout << "shutting down!" << std::endl;
+	  shutdown = true;
+	  break;
 	  
 	}
 	
-	draw_window(active_layout->get_window_layout());
+      }
+
+      
+      if (event.type == Expose | event.type == ConfigureNotify | event.type == MotionNotify) {
+	
+	try_to_draw_window();
+	
+	XFlush(display);
 	
       }
       
     }
+
+    draw_helper.join();
     
     return;
 
   } 
 
   int init_gui(void) {
-
+    
     std::cout << "Trying to allocate GUI." << std::endl;
       
     display = XOpenDisplay(NULL);
@@ -181,8 +273,8 @@ public:
                                  whiteColor,//border color
                                  whiteColor); // background color
 
-    XSelectInput(display, window, ExposureMask | PointerMotionMask | ButtonPressMask | KeyPressMask | StructureNotifyMask);
-    // Font loader
+    XSelectInput(display, window, ExposureMask | PointerMotionMask | ButtonReleaseMask | ButtonPressMask | KeyPressMask | StructureNotifyMask);
+
     font = XLoadQueryFont(display, "fixed");
     if (!font) {
       std::cerr << "Unable to load font" << std::endl;
@@ -193,10 +285,9 @@ public:
 
     gc = XCreateGC(display, window, 0, NULL); // graphic context for render?
 
+    set_gui_name("placeholder");
+    
     XSetForeground(display, gc, blackColor);
-
-    XStoreName(display, window, "wruff-tools");
-
 
     for(;;) {
       XEvent e;
@@ -209,13 +300,25 @@ public:
     
     //================================= MAIN LAYOUT CONFIG SPACE ================================= 
 
-    std::cout << "Loading Layouts..." << std::endl;
+    set_gui_name("example window");
     
-    active_layout = new window_layout();
+    std::cout << "Loading Layouts..." << std::endl;
 
-    active_layout->add_element(BUTTON,10,10,100,10, "Crazy Button");
-    active_layout->add_element(BUTTON, 10, 50, 50, 10, "Another Button");
-    active_layout->add_element(BORDER,5,0,0,0,"border");
+    active_layout = new layout_struct;
+    
+    std::cout << "done... adding elements" << std::endl;
+
+    //load a layout via file dynamically:
+    load_from_file("layouts/main_layout");
+
+    //or statically declare your layout, in case you dont wanna change it!
+    add_element(active_layout, BUTTON , 10, 70, 20 , 100, "i was statically declared!", 0);
+    add_element(active_layout, BUTTON , 10, 100, 20 , 100, "me too :D - click me for red", 1);
+    add_element(active_layout, BUTTON , 10, 130, 20 , 100, "im a callback example too! click me to close the window!", 2);
+    
+    std::cout << "done! " << std::endl;
+    
+    try_to_draw_window();
     
     //================================= WINDOW HANDLER =================================
     

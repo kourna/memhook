@@ -1,0 +1,6 @@
+BUTTON,10,10,20,20,hello im a test button!,0
+BUTTON,10,40,20,20,hi! me too  :D,0
+BORDER,3,0,0,0, ,0
+TEXT,250,10,0,0,Text element,0
+TEXT_UNDERLINED,250,30,0,0,Text element BUT WITH UNDERLINEWOOO,0
+IMAGE,500,100,0,0,images/image.bmp,0

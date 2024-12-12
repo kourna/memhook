@@ -337,13 +337,13 @@ int main() {
     
     filter_address_list(address_list, (unsigned long)100);
 
-    wruff_gui gui_manager;
+    x_gui *gui;
 
+    gui = new x_gui;
+
+    gui->init_gui();
+  
     import_offset_file("offsets");import_offset_file("offsets");
-
-    std::thread win_runtime(&wruff_gui::init_gui, gui_manager);
-
-    win_runtime.join();
     
   }
   
