@@ -1,6 +1,7 @@
 #define APPLICATION_SCAN_STRING "./app_stacktest"
 
 #include "components/gui.h"
+#include "offset_defines.h"
 
 #include <iostream>
 #include <fstream>
@@ -76,10 +77,7 @@ void log_address_list(std::vector<std::array<unsigned long,2>> address_list) {
   }
   
 }
-
-
-//i fucking hate my life why do i exist
-
+  
 std::vector<std::array<unsigned long,2>> read_memory(pid_t pid, unsigned long address, unsigned long num_bytes, scanMode scan_mode) {
   
   std::vector<std::array<unsigned long,2>> address_list;
@@ -184,6 +182,25 @@ std::vector<std::array<unsigned long,2>> read_memory(pid_t pid, unsigned long ad
   }
   
   return address_list;
+}
+
+std::vector<std::array<unsigned long, 2>>
+read_memory_with_offsets(
+			 pid_t pid, unsigned long address,
+                         std::vector<uint64_t> offsets, unsigned long num_bytes,
+                         scanMode scan_mode)
+{
+
+  uint64_t dest_addr = address;
+  
+  for(auto off_t : offsets) {
+
+    dest_addr += off_t;
+    
+  }
+
+  return read_memory(pid,dest_addr, num_bytes, scan_mode);
+  
 }
 
 std::vector<pid_t> find_pids_by_name(const std::string& processName) {
